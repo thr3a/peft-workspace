@@ -8,6 +8,7 @@ services:
     image: peft-workspace:latest
     stop_grace_period: 0s
     ipc: host
+    tty: true
     deploy:
       resources:
         reservations:
@@ -18,5 +19,5 @@ services:
     volumes:
       - "./:/app"
       - "./cache:/root/.cache"
-    command: sleep infinity
-    tty: true
+    # command: sleep infinity
+    command: python train.py

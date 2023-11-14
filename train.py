@@ -10,7 +10,7 @@ from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 model_name = "cyberagent/calm2-7b-chat"
 dataset_name = "takaaki-inada/databricks-dolly-15k-ja-zundamon"
-save_id = "test"
+save_id = "test1"
 # 他パラメータ
 VAL_SET_SIZE = 0.2 # 検証分割比率
 CUTOFF_LEN = 1000  # コンテキスト長の上限
@@ -43,8 +43,8 @@ def print_trainable_parameters(model):
     )
 
 lora_config = LoraConfig(
-    r=16,
-    lora_alpha=32,
+    r=64,
+    lora_alpha=16,
     # target_modules=["q_proj", "v_proj"],
     lora_dropout=0.01,
     bias="none",
@@ -63,7 +63,7 @@ ASSISTANT: {data_point["output"]}<|endoftext|>"""
     else:
         result = f"""USER: {data_point["instruction"]}
 ASSISTANT: {data_point["output"]}<|endoftext|>"""
-    result = result.replace('\n', '<NL>') # 改行→<NL>
+    # result = result.replace('\n', '<NL>') # 改行→<NL>
     return result
 
 def tokenize(prompt, tokenizer):
@@ -94,9 +94,9 @@ trainer = transformers.Trainer(
         gradient_accumulation_steps=1,
         gradient_checkpointing=True,
         warmup_ratio=0.03,
-        max_steps=100,
+        max_steps=1000,
         num_train_epochs=1,
-        learning_rate=1e-4,
+        learning_rate=4e-4,
         fp16=True,
         # evaluation_strategy="steps",
         # eval_steps=100,
