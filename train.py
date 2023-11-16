@@ -8,12 +8,21 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
-MODEL_NAME = "cyberagent/calm2-7b-chat"
-dataset_name = "takaaki-inada/databricks-dolly-15k-ja-zundamon"
-save_id = "zunda01"
-# 他パラメータ
+#####################################
+# 学習パラメーター
+#####################################
+EPOCHS = 1
+MAX_STEPS = 2000
+LEARNING_RATE = 4e-4
 VAL_SET_SIZE = 0.2 # 検証分割比率
 CUTOFF_LEN = 1000  # コンテキスト長の上限
+#####################################
+# 設定
+#####################################
+MODEL_NAME = "cyberagent/calm2-7b-chat"
+DATASET_NAME = "takaaki-inada/databricks-dolly-15k-ja-zundamon"
+SAVE_ID = "zunda01"
+TARGET_MODULES = ["q_proj", "v_proj"] # どれが必要かはprint.py参照
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
@@ -45,7 +54,7 @@ def print_trainable_parameters(model):
 lora_config = LoraConfig(
     r=8,
     lora_alpha=16,
-    target_modules=["q_proj", "v_proj"],
+    target_modules=TARGET_MODULES,
     lora_dropout=0.01,
     bias="none",
     task_type="CAUSAL_LM",
@@ -71,7 +80,7 @@ def tokenize(prompt, tokenizer):
     result = tokenizer(prompt, truncation=True, padding=False)
     return {"input_ids": result["input_ids"], "attention_mask": result["attention_mask"]}
 
-data = load_dataset(dataset_name)
+data = load_dataset(DATASET_NAME)
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
 
 # 学習データと検証データの準備
@@ -85,30 +94,35 @@ data = data['train'].map(lambda x: tokenize(generate_prompt(x), tokenizer))
 # old
 # data = data.map(lambda samples: tokenizer(samples["output"]), batched=True)
 
+args = transformers.TrainingArguments(
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=1,
+    gradient_checkpointing=True,
+    # warmup_ratio=0.03,
+    warmup_steps=100,
+    max_steps=MAX_STEPS,
+    num_train_epochs=EPOCHS,
+    learning_rate=LEARNING_RATE,
+    fp16=True,
+    # evaluation_strategy="steps",
+    # eval_steps=100,
+    save_steps=100,
+    logging_steps=10,
+    output_dir=f"output/{SAVE_ID}",
+    lr_scheduler_type="constant",
+    report_to="none",
+    save_total_limit=10,
+    # auto_find_batch_size=True,
+)
+
 trainer = transformers.Trainer(
     model=model,
-    train_dataset = data,
+    train_dataset=data,
     # eval_dataset = val_data,
-    args=transformers.TrainingArguments(
-        per_device_train_batch_size=2,
-        gradient_accumulation_steps=1,
-        gradient_checkpointing=True,
-        warmup_ratio=0.03,
-        max_steps=2000,
-        num_train_epochs=1,
-        learning_rate=4e-4,
-        fp16=True,
-        # evaluation_strategy="steps",
-        # eval_steps=100,
-        save_steps=100,
-        logging_steps=10,
-        output_dir=f"output/{save_id}",
-        lr_scheduler_type="constant",
-        report_to="none",
-        save_total_limit=10,
-        # auto_find_batch_size=True,
-    ),
+    args=args,
     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False)
 )
 model.config.use_cache = False  # silence the warnings. Please re-enable for inference!
+
+model = torch.compile(model) # PyTorch 2.0以降 高速化
 trainer.train()
