@@ -9,9 +9,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 # 学習パラメーター
 #####################################
 EPOCHS = 1
-MAX_STEPS = 2000
+MAX_STEPS = 5000
 LEARNING_RATE = 4e-4
-VAL_SET_SIZE = 0.2  # 検証分割比率
+VAL_SET_SIZE = 0.1  # 検証分割比率
 CUTOFF_LEN = 512  # コンテキスト長の上限
 LORA_R = 8
 LORA_ALPHA = 16
