@@ -4,9 +4,8 @@ import torch
 import torch.nn as nn
 import transformers
 from datasets import load_dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 #####################################
 # 学習パラメーター
@@ -14,7 +13,7 @@ from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 EPOCHS = 1
 MAX_STEPS = 2000
 LEARNING_RATE = 4e-4
-VAL_SET_SIZE = 0.2 # 検証分割比率
+VAL_SET_SIZE = 0.2  # 検証分割比率
 CUTOFF_LEN = 1000  # コンテキスト長の上限
 #####################################
 # 設定
@@ -22,7 +21,7 @@ CUTOFF_LEN = 1000  # コンテキスト長の上限
 MODEL_NAME = "cyberagent/calm2-7b-chat"
 DATASET_NAME = "takaaki-inada/databricks-dolly-15k-ja-zundamon"
 SAVE_ID = "zunda01"
-TARGET_MODULES = ["q_proj", "v_proj"] # どれが必要かはprint.py参照
+TARGET_MODULES = ["q_proj", "v_proj"]  # どれが必要かはprint.py参照
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
@@ -36,6 +35,7 @@ model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.bfloat16,
 )
 model = prepare_model_for_kbit_training(model)
+
 
 def print_trainable_parameters(model):
     """
@@ -51,6 +51,7 @@ def print_trainable_parameters(model):
         f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
     )
 
+
 lora_config = LoraConfig(
     r=8,
     lora_alpha=16,
@@ -63,9 +64,10 @@ lora_config = LoraConfig(
 model = get_peft_model(model, lora_config)
 print_trainable_parameters(model)
 
+
 def generate_prompt(data_point):
     if data_point["input"]:
-        result =  f"""USER: {data_point["instruction"]}
+        result = f"""USER: {data_point["instruction"]}
 {data_point["input"]}
 
 ASSISTANT: {data_point["output"]}<|endoftext|>"""
@@ -75,10 +77,12 @@ ASSISTANT: {data_point["output"]}<|endoftext|>"""
     # result = result.replace('\n', '<NL>') # 改行→<NL>
     return result
 
+
 def tokenize(prompt, tokenizer):
     # max_length
     result = tokenizer(prompt, truncation=True, padding=False)
     return {"input_ids": result["input_ids"], "attention_mask": result["attention_mask"]}
+
 
 data = load_dataset(DATASET_NAME)
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
@@ -89,7 +93,7 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
 # val_data = train_val["test"]
 # train_data = train_data.shuffle().map(lambda x: tokenize(generate_prompt(x), tokenizer))
 # val_data = val_data.shuffle().map(lambda x: tokenize(generate_prompt(x), tokenizer))
-data = data['train'].map(lambda x: tokenize(generate_prompt(x), tokenizer))
+data = data["train"].map(lambda x: tokenize(generate_prompt(x), tokenizer))
 
 # old
 # data = data.map(lambda samples: tokenizer(samples["output"]), batched=True)
@@ -120,9 +124,9 @@ trainer = transformers.Trainer(
     train_dataset=data,
     # eval_dataset = val_data,
     args=args,
-    data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False)
+    data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
 )
 model.config.use_cache = False  # silence the warnings. Please re-enable for inference!
 
-model = torch.compile(model) # PyTorch 2.0以降 高速化
+model = torch.compile(model)  # PyTorch 2.0以降 高速化
 trainer.train()
