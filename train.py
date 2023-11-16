@@ -8,15 +8,15 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
-model_name = "cyberagent/calm2-7b-chat"
+MODEL_NAME = "cyberagent/calm2-7b-chat"
 dataset_name = "takaaki-inada/databricks-dolly-15k-ja-zundamon"
-save_id = "test1"
+save_id = "zunda01"
 # 他パラメータ
 VAL_SET_SIZE = 0.2 # 検証分割比率
 CUTOFF_LEN = 1000  # コンテキスト長の上限
 
 model = AutoModelForCausalLM.from_pretrained(
-    model_name,
+    MODEL_NAME,
     quantization_config=BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_use_double_quant=True,
@@ -43,9 +43,9 @@ def print_trainable_parameters(model):
     )
 
 lora_config = LoraConfig(
-    r=64,
+    r=8,
     lora_alpha=16,
-    # target_modules=["q_proj", "v_proj"],
+    target_modules=["q_proj", "v_proj"],
     lora_dropout=0.01,
     bias="none",
     task_type="CAUSAL_LM",
@@ -72,7 +72,7 @@ def tokenize(prompt, tokenizer):
     return {"input_ids": result["input_ids"], "attention_mask": result["attention_mask"]}
 
 data = load_dataset(dataset_name)
-tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
 
 # 学習データと検証データの準備
 # train_val = data["train"].train_test_split(test_size=VAL_SET_SIZE, shuffle=True, seed=42)
@@ -90,22 +90,22 @@ trainer = transformers.Trainer(
     train_dataset = data,
     # eval_dataset = val_data,
     args=transformers.TrainingArguments(
-        per_device_train_batch_size=1,
+        per_device_train_batch_size=2,
         gradient_accumulation_steps=1,
         gradient_checkpointing=True,
         warmup_ratio=0.03,
-        max_steps=1000,
+        max_steps=2000,
         num_train_epochs=1,
         learning_rate=4e-4,
         fp16=True,
         # evaluation_strategy="steps",
         # eval_steps=100,
         save_steps=100,
-        logging_steps=1,
+        logging_steps=10,
         output_dir=f"output/{save_id}",
         lr_scheduler_type="constant",
         report_to="none",
-        save_total_limit=5,
+        save_total_limit=10,
         # auto_find_batch_size=True,
     ),
     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False)
