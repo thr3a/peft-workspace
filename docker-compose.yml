@@ -19,5 +19,5 @@ services:
     volumes:
       - "./:/app"
       - "./cache:/root/.cache"
-    # command: sleep infinity
-    command: python train_rinna.py
+    command: sleep infinity
+    # command: python train_rinna.py

@@ -9,8 +9,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 # 学習パラメーター
 #####################################
 EPOCHS = 1
-MAX_STEPS = 5000
-LEARNING_RATE = 4e-4
+MAX_STEPS = -1 # -1で無設定
+LEARNING_RATE = 4e-3
 VAL_SET_SIZE = 150  # 検証分割比率
 CUTOFF_LEN = 256  # コンテキスト長の上限 短いほどVRAM消費量も少なくなる
 LORA_R = 8
@@ -22,9 +22,9 @@ OPTIMIZER = 'paged_adamw_8bit'
 #####################################
 MODEL_NAME = "rinna/japanese-gpt-neox-3.6b-instruction-ppo"
 DATASET_NAME = "takaaki-inada/databricks-dolly-15k-ja-zundamon"
-SAVE_ID = "rinna01"
+SAVE_ID = "rinna03"
 TARGET_MODULES = ["query_key_value"]  # どれが必要かはprint.py参照
-SAVE_STEPS = 100
+SAVE_STEPS = 5
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
@@ -95,9 +95,9 @@ else:
     val_data = None
 
 args = transformers.TrainingArguments(
-    per_device_train_batch_size=16,
-    per_device_eval_batch_size=16,
-    gradient_accumulation_steps=2,
+    per_device_train_batch_size=32,
+    per_device_eval_batch_size=32,
+    gradient_accumulation_steps=16,
     gradient_checkpointing=True,
     max_steps=MAX_STEPS,
     num_train_epochs=EPOCHS,
@@ -108,7 +108,7 @@ args = transformers.TrainingArguments(
     save_steps=SAVE_STEPS,
     # warmup_ratio=0.03,
     warmup_steps=100,
-    logging_steps=10,
+    logging_steps=1,
     output_dir=f"output/{SAVE_ID}",
     lr_scheduler_type="constant",
     report_to="none",
