@@ -11,8 +11,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 EPOCHS = 1
 MAX_STEPS = 5000
 LEARNING_RATE = 4e-4
-VAL_SET_SIZE = 0.1  # 検証分割比率
-CUTOFF_LEN = 512  # コンテキスト長の上限
+VAL_SET_SIZE = 150  # 検証分割比率
+CUTOFF_LEN = 1024  # コンテキスト長の上限
 LORA_R = 8
 LORA_ALPHA = 16
 LORA_DROPOUT = 0.05
@@ -82,13 +82,14 @@ else:
     val_data = None
 
 args = transformers.TrainingArguments(
-    # per_device_train_batch_size=2,
-    # gradient_accumulation_steps=1,
+    per_device_train_batch_size=2,
+    per_device_eval_batch_size=2,
+    gradient_accumulation_steps=2,
     gradient_checkpointing=True,
     max_steps=MAX_STEPS,
     num_train_epochs=EPOCHS,
     learning_rate=LEARNING_RATE,
-    fp16=True,
+    bf16=True,
     evaluation_strategy="steps" if VAL_SET_SIZE > 0 else "no",
     eval_steps=SAVE_STEPS if VAL_SET_SIZE > 0 else None,
     save_steps=SAVE_STEPS,
@@ -100,7 +101,7 @@ args = transformers.TrainingArguments(
     report_to="none",
     save_total_limit=10,
     load_best_model_at_end=True if VAL_SET_SIZE > 0 else False,
-    auto_find_batch_size=True,
+    # auto_find_batch_size=True,
 )
 
 trainer = transformers.Trainer(
