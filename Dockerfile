@@ -18,7 +18,7 @@ RUN apt-get update \
  && ln -nfs /usr/bin/python${PYTHON_VERSION} /usr/bin/python3 \
  && rm -rf /var/lib/apt/lists/* \
  && curl -sSL https://bootstrap.pypa.io/get-pip.py | python -
-RUN pip install torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cu121
+RUN pip install torch==2.1.1 torchvision==0.16.1 --index-url https://download.pytorch.org/whl/cu121
 
 WORKDIR /app
 COPY ./requirements.txt ./
