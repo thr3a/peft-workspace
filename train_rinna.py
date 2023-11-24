@@ -20,10 +20,10 @@ OPTIMIZER = 'paged_adamw_8bit'
 #####################################
 # 設定
 #####################################
-MODEL_NAME = "cyberagent/calm2-7b-chat"
+MODEL_NAME = "rinna/japanese-gpt-neox-3.6b-instruction-ppo"
 DATASET_NAME = "takaaki-inada/databricks-dolly-15k-ja-zundamon"
-SAVE_ID = "zunda01"
-TARGET_MODULES = ["q_proj", "v_proj"]  # どれが必要かはprint.py参照
+SAVE_ID = "rinna01"
+TARGET_MODULES = ["query_key_value"]  # どれが必要かはprint.py参照
 SAVE_STEPS = 100
 
 model = AutoModelForCausalLM.from_pretrained(
@@ -51,18 +51,30 @@ lora_config = LoraConfig(
 
 model = get_peft_model(model, lora_config)
 
-
 def generate_prompt(data_point):
     if data_point["input"]:
-        result = f"""USER: {data_point["instruction"]}
-{data_point["input"]}
-
-ASSISTANT: {data_point["output"]}<|endoftext|>"""
+        result = f"""ユーザー: {data_point["instruction"]}
+ユーザー: {data_point["input"]}
+システム: {data_point["output"]}"""
     else:
-        result = f"""USER: {data_point["instruction"]}
-ASSISTANT: {data_point["output"]}<|endoftext|>"""
-    # result = result.replace("\n", "<NL>")  # 改行→<NL> rinnaの場合必要
+        result = f"""ユーザー: {data_point["instruction"]}
+システム: {data_point["output"]}"""
+
+    # 改行→<NL>
+    result = result.replace('\n', '<NL>')
     return result
+
+# def generate_prompt(data_point):
+#     if data_point["input"]:
+#         result = f"""USER: {data_point["instruction"]}
+# {data_point["input"]}
+
+# ASSISTANT: {data_point["output"]}<|endoftext|>"""
+#     else:
+#         result = f"""USER: {data_point["instruction"]}
+# ASSISTANT: {data_point["output"]}<|endoftext|>"""
+#     # result = result.replace("\n", "<NL>")  # 改行→<NL> rinnaの場合必要
+#     return result
 
 
 def tokenize(prompt, tokenizer):
@@ -71,7 +83,7 @@ def tokenize(prompt, tokenizer):
 
 
 data = load_dataset(DATASET_NAME)
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=False)
 
 # 学習データと検証データの準備
 if VAL_SET_SIZE > 0:
@@ -83,8 +95,8 @@ else:
     val_data = None
 
 args = transformers.TrainingArguments(
-    per_device_train_batch_size=8,
-    per_device_eval_batch_size=2,
+    per_device_train_batch_size=16,
+    per_device_eval_batch_size=16,
     gradient_accumulation_steps=2,
     gradient_checkpointing=True,
     max_steps=MAX_STEPS,
@@ -96,7 +108,7 @@ args = transformers.TrainingArguments(
     save_steps=SAVE_STEPS,
     # warmup_ratio=0.03,
     warmup_steps=100,
-    logging_steps=1,
+    logging_steps=10,
     output_dir=f"output/{SAVE_ID}",
     lr_scheduler_type="constant",
     report_to="none",

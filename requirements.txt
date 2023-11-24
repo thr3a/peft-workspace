@@ -4,3 +4,4 @@ bitsandbytes==0.41.1
 datasets
 accelerate==0.24.*
 scipy
+sentencepiece

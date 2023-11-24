@@ -20,4 +20,4 @@ services:
       - "./:/app"
       - "./cache:/root/.cache"
     # command: sleep infinity
-    command: python train.py
+    command: python train_rinna.py
