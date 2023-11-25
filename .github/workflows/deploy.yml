@@ -38,5 +38,5 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_BASENAME }}:${{ github.run_number }}
-            ${{ env.IMAGE_LATEST }}:latest
+            ${{ env.IMAGE_BASENAME }}:latest
           file: Dockerfile.base
