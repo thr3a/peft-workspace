@@ -10,7 +10,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 #####################################
 EPOCHS = 1
 MAX_STEPS = -1 # -1で無設定
-LEARNING_RATE = 4e-3
+LEARNING_RATE = 4e-4
 VAL_SET_SIZE = 150  # 検証分割比率
 CUTOFF_LEN = 256  # コンテキスト長の上限 短いほどVRAM消費量も少なくなる
 LORA_R = 8
@@ -22,8 +22,13 @@ OPTIMIZER = 'paged_adamw_8bit'
 #####################################
 MODEL_NAME = "rinna/japanese-gpt-neox-3.6b-instruction-ppo"
 DATASET_NAME = "takaaki-inada/databricks-dolly-15k-ja-zundamon"
-SAVE_ID = "rinna03"
-TARGET_MODULES = ["query_key_value"]  # どれが必要かはprint.py参照
+SAVE_ID = "rinna04"
+TARGET_MODULES = [
+    "query_key_value",
+    "dense",
+    "dense_h_to_4h",
+    "dense_4h_to_h",
+] # どれが必要かはprint.py参照
 SAVE_STEPS = 5
 
 model = AutoModelForCausalLM.from_pretrained(
@@ -102,7 +107,8 @@ args = transformers.TrainingArguments(
     max_steps=MAX_STEPS,
     num_train_epochs=EPOCHS,
     learning_rate=LEARNING_RATE,
-    bf16=True,
+    # bf16=True,
+    fp16=True,
     evaluation_strategy="steps" if VAL_SET_SIZE > 0 else "no",
     eval_steps=SAVE_STEPS if VAL_SET_SIZE > 0 else None,
     save_steps=SAVE_STEPS,
