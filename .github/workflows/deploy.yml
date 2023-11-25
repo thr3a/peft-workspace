@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}:${{ github.run_number }}
+  IMAGE_BASENAME: ghcr.io/${{ github.repository }}
 
 jobs:
   build-and-push-image:
@@ -36,5 +36,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ${{ env.IMAGE_NAME }}
+          tags: |
+            ${{ env.IMAGE_BASENAME }}:${{ github.run_number }}
+            ${{ env.IMAGE_LATEST }}:latest
           file: Dockerfile.base
